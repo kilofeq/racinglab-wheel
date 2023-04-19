@@ -8,7 +8,7 @@
 #define ENCODER_CPR 10000
 #define WHEEL_DEGREES 1080
 #define MAX_TORQUE 100
-#define ENDSTOP_TORQUE_GAIN 30
+#define ENDSTOP_TORQUE_GAIN 10
 
 float wheel_turns = (float)WHEEL_DEGREES / (float)360;
 float joystick_max_position = wheel_turns * float(ENCODER_CPR);
