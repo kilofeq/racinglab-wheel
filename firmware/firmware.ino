@@ -6,9 +6,8 @@
 #define MAX485_RE_NEG 2
 #define SLAVE_BAUDRATE 115200
 #define ENCODER_CPR 10000
-#define WHEEL_DEGREES 1080
-#define MAX_TORQUE 100
-#define ENDSTOP_TORQUE_GAIN 10
+#define WHEEL_DEGREES 180
+#define END_STOP_TORQUE 80
 
 float wheel_turns = (float)WHEEL_DEGREES / (float)360;
 float joystick_max_position = wheel_turns * float(ENCODER_CPR);
@@ -98,20 +97,12 @@ void loop()
   // FFB
   int torque = 0;
   // Endstop
-  int x_axis_offset =  x_axis_position - joystick_max_position;
-  if (x_axis_offset < 0) {
-    x_axis_offset = x_axis_offset * -1;
-  }
-  if (x_axis_position > joystick_max_position) {
-    torque = -ENDSTOP_TORQUE_GAIN * x_axis_offset;
-    if (torque > MAX_TORQUE) {
-      torque = MAX_TORQUE;
-    }
-  } else if (x_axis_position < -joystick_max_position) {
-    torque = ENDSTOP_TORQUE_GAIN * x_axis_offset;
-    if (torque < -MAX_TORQUE) {
-      torque = -MAX_TORQUE;
-    }
+  if (x_axis_position + 1 > joystick_max_position) {
+    torque = -END_STOP_TORQUE;
+  } else if (x_axis_position - 1 -joystick_max_position) {
+    torque = END_STOP_TORQUE;
+  } else {
+    torque = 0;
   }
   myeffectparams[0].springMaxPosition = joystick_max_position;
   myeffectparams[0].springPosition = x_axis_position;
