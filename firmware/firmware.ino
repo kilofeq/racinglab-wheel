@@ -7,7 +7,7 @@
 #define SLAVE_BAUDRATE 115200
 #define ENCODER_CPR 10000
 #define WHEEL_DEGREES 1080
-#define ENDSTOP_MAX_TORQUE 100
+#define MAX_TORQUE 100
 #define ENDSTOP_TORQUE_GAIN 30
 
 float wheel_turns = (float)WHEEL_DEGREES / (float)360;
@@ -104,13 +104,13 @@ void loop()
   }
   if (x_axis_position > joystick_max_position) {
     torque = -ENDSTOP_TORQUE_GAIN * x_axis_offset;
-    if (torque > ENDSTOP_MAX_TORQUE) {
-      torque = ENDSTOP_MAX_TORQUE;
+    if (torque > MAX_TORQUE) {
+      torque = MAX_TORQUE;
     }
   } else if (x_axis_position < -joystick_max_position) {
     torque = ENDSTOP_TORQUE_GAIN * x_axis_offset;
-    if (torque < -ENDSTOP_MAX_TORQUE) {
-      torque = -ENDSTOP_MAX_TORQUE;
+    if (torque < -MAX_TORQUE) {
+      torque = -MAX_TORQUE;
     }
   }
   myeffectparams[0].springMaxPosition = joystick_max_position;
