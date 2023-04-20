@@ -19,7 +19,7 @@ double Setpoint, Input, Output;
 //double Kp=2, Ki=5, Kd=1;
 double Kp = 0.1 , Ki = 30 , Kd =  0;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
-bool initialRun = true;
+bool initialRun = false;
 
 ModbusMaster modbus;
 
@@ -102,8 +102,10 @@ void loop() {
       total_force = -255;
     }
   }
+  Serial.println(Wheel.encoder.currentPosition);
+  Serial.println(total_force);
 //  set total gain = 0.2 need replace by wheelConfig.totalGain.
-  torqueModbus.setTorque((total_force / 2.55) * 0.2, modbus);
+  torqueModbus.setTorque((total_force / 2.55) * -0.2, modbus);
 }
 
 

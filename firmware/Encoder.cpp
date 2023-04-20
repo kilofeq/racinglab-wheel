@@ -51,6 +51,7 @@ void Encoder::updatePosition(ModbusMaster modbus) {
         positionChange = encoderPositionChange;
       }
       currentPosition = currentPosition + positionChange;
+      prevEncoderValue = encoderValue;
     }
   }
   uint32_t currentEncoderTime = (int32_t) millis();
