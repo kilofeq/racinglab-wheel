@@ -18,6 +18,7 @@ void Encoder::setConfig(WheelConfig wheelConfig) {
 }
 
 void Encoder::initVariables() {
+  prevEncoderValue = 0;
   currentPosition = 0;
   lastPosition = 0;
   correctPosition = 0;
@@ -31,16 +32,29 @@ void Encoder::initVariables() {
 void Encoder::updatePosition(ModbusMaster modbus) {
   int result = modbus.readHoldingRegisters(391, 1);
   if (result == modbus.ku8MBSuccess) {
-    currentPosition = modbus.getResponseBuffer(0);
-    positionChange = currentPosition - lastPosition;
-    uint32_t currentEncoderTime = (int32_t) millis();
-    int16_t diffTime = (int16_t)(currentEncoderTime - lastEncoderTime);
-    if (diffTime > 0) {
-      currentVelocity = positionChange / diffTime;
-      currentAcceleration = (abs(currentVelocity) - abs(lastVelocity)) / diffTime;
-      lastEncoderTime = currentEncoderTime;
-      lastVelocity = currentVelocity;
+    int encoderValue = modbus.getResponseBuffer(0);
+    if (encoderValue != prevEncoderValue) {
+      int encoderPositionChange = encoderValue - prevEncoderValue;
+      // Handle new rotation
+      if (encoderPositionChange > 9000) {
+        // Corrected position change
+        positionChange = cPR - encoderPositionChange;
+      } else if (encoderPositionChange < -9000) {
+        // Corrected position change
+        positionChange = cPR + encoderPositionChange;
+      } else {
+        positionChange = encoderPositionChange;
+      }
+      currentPosition = currentPosition + positionChange;
     }
-    lastPosition = currentPosition;
   }
+  uint32_t currentEncoderTime = (int32_t) millis();
+  int16_t diffTime = (int16_t)(currentEncoderTime - lastEncoderTime);
+  if (diffTime > 0) {
+    currentVelocity = positionChange / diffTime;
+    currentAcceleration = (abs(currentVelocity) - abs(lastVelocity)) / diffTime;
+    lastEncoderTime = currentEncoderTime;
+    lastVelocity = currentVelocity;
+  }
+  lastPosition = currentPosition;
 }

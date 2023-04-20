@@ -18,6 +18,7 @@ class Encoder {
     bool z1stUp;
     uint32_t lastEncoderTime;
 
+    int32_t  prevEncoderValue;
     int32_t  currentPosition;
     int32_t  lastPosition;
     int32_t  correctPosition;
