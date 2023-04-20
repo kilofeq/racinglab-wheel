@@ -1,25 +1,27 @@
-#include "FfbWheel.h"
-#include "Encoder.h"
-#include "DigitalWriteFast.h"
-#include "PID_v1.h"
 #include <ModbusMaster.h>
-
-Wheel_ Wheel;
-#define BAUD_RATE 115200
+#include "Joystick.h"
 
 #define SLAVE_ID 1
 #define MAX485_DE 3
 #define MAX485_RE_NEG 2
 #define SLAVE_BAUDRATE 115200
+#define ENCODER_CPR 10000
+#define WHEEL_DEGREES 180
+#define END_STOP_TORQUE 80
 
-int32_t total_force = 0;
-int32_t last_total_force = 0;
+float wheel_turns = (float)WHEEL_DEGREES / (float)360;
+float joystick_max_position = wheel_turns * float(ENCODER_CPR);
 
-double Setpoint, Input, Output;
-//double Kp=2, Ki=5, Kd=1;
-double Kp = 0.1 , Ki = 30 , Kd =  0;
-PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
-bool initialRun = true;
+//X-axis & Y-axis REQUIRED
+Joystick_ Joystick(2, 
+  JOYSTICK_TYPE_JOYSTICK, 4, 0,
+  true, true, false, //X,Y, noZ
+  false, false, false,//Rx,Ry,Rz
+  false, false, false, false, false);
+
+Gains mygains[2];
+EffectParams myeffectparams[2];
+int32_t forces[2] = {0};
 
 ModbusMaster modbus;
 
@@ -35,16 +37,16 @@ void postTransmission()
   digitalWrite(MAX485_DE, 0);
 }
 
-#include "TorqueModbus.h"
-TorqueModbus torqueModbus;
 
-void setup() {
+void setup()
+{
   pinMode(MAX485_RE_NEG, OUTPUT);
   pinMode(MAX485_DE, OUTPUT);
   // Init in receive mode
   digitalWrite(MAX485_RE_NEG, 0);
   digitalWrite(MAX485_DE, 0);
 
+  Serial.begin(9600);
   Serial1.begin(SLAVE_BAUDRATE, SERIAL_8O1);
   modbus.begin(SLAVE_ID, Serial1);
 
@@ -52,88 +54,66 @@ void setup() {
   modbus.preTransmission(preTransmission);
   modbus.postTransmission(postTransmission);
 
-  torqueModbus.setTorque(0, modbus);
-  Wheel.begin();
-  Input = Wheel.encoder.currentPosition;
-  myPID.SetMode(AUTOMATIC);
-  myPID.SetSampleTime(0.01);
-  myPID.SetOutputLimits(-50, 50);
-  Serial.begin(BAUD_RATE);
+  // FFB
+  Joystick.setXAxisRange(-joystick_max_position, joystick_max_position);
+  mygains[0].totalGain = 100;//0-100
+  mygains[0].springGain = 100;//0-100
+  Joystick.setGains(mygains);
+  Joystick.begin();
 }
-void loop() {
-  if (initialRun == true ) {
-//    position control is not correctly, wheel runs over disired postion serveral times before stop
-    torqueModbus.setTorque(10, modbus);
-    gotoPosition(Wheel.encoder.minValue);
-    gotoPosition(Wheel.encoder.maxValue);
-    gotoPosition( 0);
-    initialRun = false;
-    torqueModbus.setTorque(0, modbus);
-  } else
+
+int prev_encoder_value;
+int prev_torque = 0;
+int x_axis_position = 0;
+
+void loop()
+{
+  uint8_t result;
+  uint16_t data[6];
+  int torque_setting_position = 200;
+  int encoder_setting_position = 391;
+
+  // Encoder
+  result = modbus.readHoldingRegisters(encoder_setting_position, 1);
+  if (result == modbus.ku8MBSuccess)
   {
-    // assign for re-test without initialRun
-    //        Serial.print("currentVelocity: ");
-    //        Serial.print(Wheel.encoder.maxVelocity);
-    //        Serial.print(" maxAcceleration: ");
-    //        Serial.println(Wheel.encoder.maxAcceleration);
-    //        Serial.print("   maxPositionChange: ");
-//    Serial.println(Wheel.encoder.currentPosition);
-//    Wheel.encoder.maxPositionChange = 1151;
-//    Wheel.encoder.maxVelocity  = 72;
-//    Wheel.encoder.maxAcceleration = 33;
-    Wheel.encoder.updatePosition(modbus);
-    if (Wheel.encoder.currentPosition > Wheel.encoder.maxValue) {
-      Wheel.xAxis(32767);
-    } else if (Wheel.encoder.currentPosition < Wheel.encoder.minValue) {
-      Wheel.xAxis(-32767);
-    } else {
-      Wheel.xAxis(map(Wheel.encoder.currentPosition, Wheel.encoder.minValue , Wheel.encoder.maxValue, -32768, 32767));
-    }
-
-    Wheel.RecvFfbReport();
-    Wheel.write();
-    total_force = Wheel.ffbEngine.ForceCalculator(Wheel.encoder);
-    total_force = constrain(total_force, -255, 255);
-    //  Serial.println(Wheel.encoder.currentPosition);
-    //  when reach max and min wheel range, max force to prevent wheel goes over.
-    if (Wheel.encoder.currentPosition >= Wheel.encoder.maxValue) {
-      total_force = 255;
-    } else if (Wheel.encoder.currentPosition <= Wheel.encoder.minValue) {
-      total_force = -255;
+    int encoder_value = modbus.getResponseBuffer(0);
+    if (encoder_value != prev_encoder_value) {
+      int encoder_position_change = encoder_value - prev_encoder_value;
+      // Handle new rotation
+      if (encoder_position_change > 9000) {
+        int correct_encoder_position_change = ENCODER_CPR - encoder_position_change;
+        x_axis_position = x_axis_position + correct_encoder_position_change;
+      } else if (encoder_position_change < -9000) {
+        int correct_encoder_position_change = ENCODER_CPR + encoder_position_change;
+        x_axis_position = x_axis_position + correct_encoder_position_change;
+      } else {
+        x_axis_position = x_axis_position + encoder_position_change;
+      }
+      prev_encoder_value = encoder_value;
     }
   }
-//  set total gain = 0.2 need replace by wheelConfig.totalGain.
-  torqueModbus.setTorque(total_force * 0.2, modbus);
-}
 
-
-void gotoPosition(int32_t targetPosition) {
-  Setpoint = targetPosition;
-  while (Wheel.encoder.currentPosition != targetPosition) {
-    Setpoint = targetPosition;
-    Wheel.encoder.updatePosition(modbus);
-    Input = Wheel.encoder.currentPosition ;
-    myPID.Compute();
-    torqueModbus.setTorque(-Output, modbus);
-    CalculateMaxSpeedAndMaxAcceleration();
-    Serial.print("Encoder Position: ");
-    Serial.print(Wheel.encoder.currentPosition);
-    Serial.print("  ");
-    Serial.print(Setpoint);
-    Serial.print("  ");
-    Serial.print("Torque: ");
-    Serial.println(Output);
+  // FFB
+  int torque = 0;
+  // Endstop
+  if (x_axis_position + 1 > joystick_max_position) {
+    torque = -END_STOP_TORQUE;
+  } else if (x_axis_position - 1 -joystick_max_position) {
+    torque = END_STOP_TORQUE;
+  } else {
+    torque = 0;
   }
-}
-
-void CalculateMaxSpeedAndMaxAcceleration() {
-  if (Wheel.encoder.maxVelocity < abs(Wheel.encoder.currentVelocity)) {
-    Wheel.encoder.maxVelocity = abs(Wheel.encoder.currentVelocity);
+  myeffectparams[0].springMaxPosition = joystick_max_position;
+  myeffectparams[0].springPosition = x_axis_position;
+  Joystick.setXAxis(x_axis_position);
+  Joystick.setEffectParams(myeffectparams);
+  Joystick.getForce(forces);
+  if (x_axis_position < joystick_max_position && x_axis_position > -joystick_max_position) {
+    torque = forces[0] / 255;
   }
-  if (Wheel.encoder.maxAcceleration < abs(Wheel.encoder.currentAcceleration)) {
-    Wheel.encoder.maxAcceleration = abs(Wheel.encoder.currentAcceleration);
+  if (prev_torque != torque) {
+    modbus.writeSingleRegister(torque_setting_position, torque);
   }
-  if (Wheel.encoder.maxPositionChange < abs(Wheel.encoder.positionChange)) {
-    Wheel.encoder.maxPositionChange = abs(Wheel.encoder.positionChange);
-  }
+  prev_torque = torque;
 }
