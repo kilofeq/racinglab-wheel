@@ -105,7 +105,7 @@ void loop() {
   Serial.println(Wheel.encoder.currentPosition);
   Serial.println(total_force);
 //  set total gain = 0.2 need replace by wheelConfig.totalGain.
-  torqueModbus.setTorque((total_force / 2.55) * -0.2, modbus);
+  torqueModbus.setTorque((total_force / 2.55) * -0.5, modbus);
 }
 
 
