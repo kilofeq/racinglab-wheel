@@ -103,7 +103,7 @@ void loop() {
     }
   }
 //  set total gain = 0.2 need replace by wheelConfig.totalGain.
-  torqueModbus.setTorque(total_force * 0.2, modbus);
+  torqueModbus.setTorque((total_force / 2.55) * 0.2, modbus);
 }
 
 

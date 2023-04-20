@@ -14,6 +14,7 @@ class Encoder {
     int32_t maxValue;
     int32_t  minValue;
 
+    bool isInitialized;
     bool inverted;
     bool z1stUp;
     uint32_t lastEncoderTime;

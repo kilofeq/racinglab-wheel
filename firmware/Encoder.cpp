@@ -18,6 +18,7 @@ void Encoder::setConfig(WheelConfig wheelConfig) {
 }
 
 void Encoder::initVariables() {
+  isInitialized = false;
   prevEncoderValue = 0;
   currentPosition = 0;
   lastPosition = 0;
@@ -33,6 +34,10 @@ void Encoder::updatePosition(ModbusMaster modbus) {
   int result = modbus.readHoldingRegisters(391, 1);
   if (result == modbus.ku8MBSuccess) {
     int encoderValue = modbus.getResponseBuffer(0);
+    if (!isInitialized) {
+      prevEncoderValue = encoderValue;
+      isInitialized = true;
+    }
     if (encoderValue != prevEncoderValue) {
       int encoderPositionChange = encoderValue - prevEncoderValue;
       // Handle new rotation
