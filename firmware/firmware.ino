@@ -13,8 +13,8 @@ float wheel_turns = (float)WHEEL_DEGREES / (float)360;
 float joystick_max_position = wheel_turns * float(ENCODER_CPR);
 
 //X-axis & Y-axis REQUIRED
-Joystick_ Joystick(2, 
-  JOYSTICK_TYPE_JOYSTICK, 4, 0,
+Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, 
+  JOYSTICK_TYPE_JOYSTICK, 8, 0,
   true, true, false, //X,Y, noZ
   false, false, false,//Rx,Ry,Rz
   false, false, false, false, false);
@@ -91,10 +91,8 @@ void loop()
   Joystick.getForce(forces);
   // Endstop
   if (x_axis_position + 1 > joystick_max_position) {
-    Serial.println("endstop right");
     torque = -END_STOP_TORQUE;
   } else if (x_axis_position - 1 < -joystick_max_position) {
-    Serial.println("endstop left");
     torque = END_STOP_TORQUE;
   } else {
     torque = forces[0] / 255;
@@ -102,7 +100,7 @@ void loop()
   if (prev_torque != torque) {
     modbus.writeSingleRegister(torque_setting_position, torque);
   }
-  Serial.println(torque);
+  Serial.println(x_axis_position);
   prev_torque = torque;
 }
 
