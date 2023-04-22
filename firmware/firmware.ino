@@ -10,7 +10,7 @@
 #define END_STOP_TORQUE 80
 
 float wheel_turns = (float)WHEEL_DEGREES / (float)360;
-float joystick_max_position = wheel_turns * float(ENCODER_CPR);
+float joystick_max_position = (wheel_turns * float(ENCODER_CPR)) /2;
 
 //X-axis & Y-axis REQUIRED
 Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, 
@@ -84,23 +84,28 @@ void loop()
 
   // FFB
   int torque = 0;
+  int corrected_x_axis_position = x_axis_position;
   myeffectparams[0].springMaxPosition = joystick_max_position;
   myeffectparams[0].springPosition = x_axis_position;
-  Joystick.setXAxis(x_axis_position);
+  if (corrected_x_axis_position > joystick_max_position) {
+    corrected_x_axis_position = joystick_max_position;
+  } else if (corrected_x_axis_position < joystick_max_position) {
+    corrected_x_axis_position = -joystick_max_position;
+  }
+  Joystick.setXAxis(corrected_x_axis_position);
   Joystick.setEffectParams(myeffectparams);
   Joystick.getForce(forces);
   // Endstop
-  if (x_axis_position + 1 > joystick_max_position) {
+  if (x_axis_position > 0 && x_axis_position + 1 >= joystick_max_position) {
     torque = -END_STOP_TORQUE;
-  } else if (x_axis_position - 1 < -joystick_max_position) {
+  } else if (x_axis_position < 0 && x_axis_position - 1 <= -joystick_max_position) {
     torque = END_STOP_TORQUE;
   } else {
-    torque = forces[0] / 255;
+    torque = map(forces[0], -255, 255, -100, 100);
   }
   if (prev_torque != torque) {
     modbus.writeSingleRegister(torque_setting_position, torque);
   }
-  Serial.println(x_axis_position);
   prev_torque = torque;
 }
 
