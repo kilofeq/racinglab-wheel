@@ -8,5 +8,5 @@ class TorqueModbus {
  public:
   TorqueModbus(void);
   ~TorqueModbus(void);
-   void setTorque(int16_t force, ModbusMaster modbus);
+   void setTorque(uint16_t torque, ModbusMaster modbus);
 };
