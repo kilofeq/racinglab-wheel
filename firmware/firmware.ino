@@ -11,7 +11,6 @@ Wheel_ Wheel;
 #define MAX485_DE 3
 #define MAX485_RE_NEG 2
 #define SLAVE_BAUDRATE 115200
-#define MAX_TORQUE 100
 
 int32_t total_force = 0;
 int32_t last_total_force = 0;
@@ -20,7 +19,7 @@ double Setpoint, Input, Output;
 //double Kp=2, Ki=5, Kd=1;
 double Kp = 0.1 , Ki = 30 , Kd =  0;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
-bool initialRun = true;
+bool initialRun = false;
 
 ModbusMaster modbus;
 
@@ -94,31 +93,25 @@ void loop() {
     Wheel.RecvFfbReport();
     Wheel.write();
     total_force = Wheel.ffbEngine.ForceCalculator(Wheel.encoder);
-    total_force = constrain(total_force, -MAX_TORQUE, MAX_TORQUE);
+    total_force = constrain(total_force, -255, 255);
     //  Serial.println(Wheel.encoder.currentPosition);
     //  when reach max and min wheel range, max force to prevent wheel goes over.
     if (Wheel.encoder.currentPosition >= Wheel.encoder.maxValue) {
-      total_force = MAX_TORQUE;
+      total_force = 255;
     } else if (Wheel.encoder.currentPosition <= Wheel.encoder.minValue) {
-      total_force = -MAX_TORQUE;
+      total_force = -255;
     }
   }
   Serial.println(Wheel.encoder.currentPosition);
   Serial.println(total_force);
   // For AASD force has to be inverted
-  torqueModbus.setTorque(-total_force, modbus);
+  torqueModbus.setTorque((total_force / 2.55) * -1, modbus);
 }
 
 
 void gotoPosition(int32_t targetPosition) {
   Setpoint = targetPosition;
-  bool isDone = Wheel.encoder.currentPosition != targetPosition;
-  if (Setpoint > 0 && targetPosition > Setpoint) {
-    isDone = true;
-  } else if (Setpoint < 0 && targetPosition < Setpoint) {
-    isDone = true;
-  }
-  while (isDone) {
+  while (Wheel.encoder.currentPosition != targetPosition) {
     Setpoint = targetPosition;
     Wheel.encoder.updatePosition(modbus);
     Input = Wheel.encoder.currentPosition ;

@@ -8,5 +8,6 @@ TorqueModbus::~TorqueModbus() {
 }
 
 void TorqueModbus::setTorque(int16_t force, ModbusMaster modbus) {
-	modbus.writeSingleRegister(200, force);
+	int normalizedForce = map(force, -255,255, MINFORCE, MAXFORCE);
+	modbus.writeSingleRegister(200, normalizedForce);
 }

@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <ModbusMaster.h>
+#define MAXFORCE 100
+#define MINFORCE -100
 
 
 class TorqueModbus {
