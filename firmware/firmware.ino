@@ -49,6 +49,8 @@ void setup()
 
   // FFB
   Joystick.setXAxisRange(-joystick_max_position, joystick_max_position);
+  mygains[0].totalGain = 100;//0-100
+  mygains[0].springGain = 100;//0-100
   Joystick.setGains(mygains);
   Joystick.begin();
   // Inital encoder value
