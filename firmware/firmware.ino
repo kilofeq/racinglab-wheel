@@ -6,7 +6,7 @@
 #define MAX485_RE_NEG 2
 #define SLAVE_BAUDRATE 115200
 #define ENCODER_CPR 10000
-#define WHEEL_DEGREES 180
+#define WHEEL_DEGREES 1080
 #define END_STOP_TORQUE 80
 
 float wheel_turns = (float)WHEEL_DEGREES / (float)360;
