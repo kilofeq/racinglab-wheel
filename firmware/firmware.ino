@@ -84,15 +84,9 @@ void loop()
 
   // FFB
   int torque = 0;
-  int corrected_x_axis_position = x_axis_position;
   myeffectparams[0].springMaxPosition = joystick_max_position;
   myeffectparams[0].springPosition = x_axis_position;
-  if (corrected_x_axis_position > joystick_max_position) {
-    corrected_x_axis_position = joystick_max_position;
-  } else if (corrected_x_axis_position < joystick_max_position) {
-    corrected_x_axis_position = -joystick_max_position;
-  }
-  Joystick.setXAxis(corrected_x_axis_position);
+  Joystick.setXAxis(x_axis_position);
   Joystick.setEffectParams(myeffectparams);
   Joystick.getForce(forces);
   // Endstop
