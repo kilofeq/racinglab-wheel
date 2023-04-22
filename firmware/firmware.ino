@@ -84,15 +84,17 @@ void loop()
 
   // FFB
   int torque = 0;
-  // Endstop
   myeffectparams[0].springMaxPosition = joystick_max_position;
   myeffectparams[0].springPosition = x_axis_position;
   Joystick.setXAxis(x_axis_position);
   Joystick.setEffectParams(myeffectparams);
   Joystick.getForce(forces);
+  // Endstop
   if (x_axis_position + 1 > joystick_max_position) {
+    Serial.println("endstop right");
     torque = -END_STOP_TORQUE;
-  } else if (x_axis_position - 1 -joystick_max_position) {
+  } else if (x_axis_position - 1 < -joystick_max_position) {
+    Serial.println("endstop left");
     torque = END_STOP_TORQUE;
   } else {
     torque = forces[0] / 255;
@@ -100,6 +102,7 @@ void loop()
   if (prev_torque != torque) {
     modbus.writeSingleRegister(torque_setting_position, torque);
   }
+  Serial.println(torque);
   prev_torque = torque;
 }
 
