@@ -16,10 +16,10 @@ int encoder_max = ENCODER_CPR - 1;
 
 //X-axis & Y-axis REQUIRED
 Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, 
-  JOYSTICK_TYPE_JOYSTICK, 8, 0,
-  true, true, false, //X,Y, noZ
-  false, false, false,//Rx,Ry,Rz
-  false, false, false, false, false);
+JOYSTICK_TYPE_JOYSTICK, 8, 0,
+true, true, false, //X,Y, noZ
+false, false, false,//Rx,Ry,Rz
+false, false, false, false, false);
 
 Gains mygains[2];
 EffectParams myeffectparams[2];
