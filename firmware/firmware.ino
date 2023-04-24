@@ -51,7 +51,7 @@ void setup()
 
   // FFB
   Joystick.setXAxisRange(-joystick_max_position, joystick_max_position);
-  mygains[0].totalGain = 100;//0-100
+  mygains[0].totalGain = 50;//0-100
   mygains[0].springGain = 100;//0-100
   Joystick.setGains(mygains);
   Joystick.begin();
@@ -76,17 +76,25 @@ void loop()
     if (encoder_value != prev_encoder_value) {
       // Handle new rotation
       if (encoder_position_change > 9000) {
-        turns = turns + 1;
-      } else if (encoder_position_change < -9000) {
         turns = turns - 1;
+      } else if (encoder_position_change < -9000) {
+        turns = turns + 1;
       }
+      Serial.println(turns);
+      int negative_encoder_value = map(encoder_value, 0, ENCODER_CPR - 1, -(ENCODER_CPR - 1), 0);
       if (turns > 0) {
         x_axis_position = ENCODER_CPR * turns + encoder_value;
-      } else if (turns < 0) {
-        x_axis_position = ENCODER_CPR * turns - encoder_value;
+      } else if (turns < -1) {
+        int corrected_turns = turns + 1;
+        x_axis_position = ENCODER_CPR * corrected_turns + negative_encoder_value;
       } else {
-        x_axis_position = encoder_value;
+        if (turns == -1) {
+          x_axis_position = negative_encoder_value;
+        } else {
+          x_axis_position = encoder_value;
+        }
       }
+      Serial.println(x_axis_position);
       prev_encoder_value = encoder_value;
     }
   }
@@ -104,7 +112,7 @@ void loop()
   } else if (x_axis_position < 0 && x_axis_position - 1 <= -joystick_max_position) {
     torque = END_STOP_TORQUE;
   } else {
-    torque = map(forces[0], -255, 255, -100, 100);
+    torque = forces[0];
   }
   if (prev_torque != torque) {
     modbus.writeSingleRegister(torque_setting_position, torque);
