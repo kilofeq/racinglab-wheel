@@ -27,9 +27,11 @@ ModbusMaster modbus;
 
 int torque_setting_position = 200;
 int encoder_setting_position = 391;
+int turns = 0;
 int prev_encoder_value;
 int prev_torque = 0;
 int x_axis_position = 0;
+int encoder_center_offset = 0;
 
 void setup()
 {
@@ -58,6 +60,7 @@ void setup()
   if (result == modbus.ku8MBSuccess)
   {
     int encoder_value = modbus.getResponseBuffer(0);
+    // encoder_center_offset = encoder_value; 
     prev_encoder_value = encoder_value;
   }
 }
@@ -73,11 +76,17 @@ void loop()
     if (encoder_value != prev_encoder_value) {
       // Handle new rotation
       if (encoder_position_change > 9000) {
-        encoder_position_change = ENCODER_CPR - encoder_position_change;
+        turns = turns + 1;
       } else if (encoder_position_change < -9000) {
-        encoder_position_change = ENCODER_CPR + encoder_position_change;
+        turns = turns - 1;
       }
-      x_axis_position = x_axis_position + encoder_position_change;
+      if (turns > 0) {
+        x_axis_position = ENCODER_CPR * turns + encoder_value;
+      } else if (turns < 0) {
+        x_axis_position = ENCODER_CPR * turns - encoder_value;
+      } else {
+        x_axis_position = encoder_value;
+      }
       prev_encoder_value = encoder_value;
     }
   }
