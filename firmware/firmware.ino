@@ -7,7 +7,7 @@
 #define SLAVE_BAUDRATE 115200
 #define ENCODER_CPR 10000
 #define WHEEL_DEGREES 1080
-#define END_STOP_TORQUE 80
+#define END_STOP_TORQUE 100
 
 float wheel_turns = (float)WHEEL_DEGREES / (float)360;
 float joystick_max_position = (wheel_turns * float(ENCODER_CPR)) /2;
