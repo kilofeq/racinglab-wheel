@@ -11,6 +11,8 @@
 
 float wheel_turns = (float)WHEEL_DEGREES / (float)360;
 float joystick_max_position = (wheel_turns * float(ENCODER_CPR)) /2;
+int encoder_min = 0;
+int encoder_max = ENCODER_CPR - 1;
 
 //X-axis & Y-axis REQUIRED
 Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, 
@@ -31,7 +33,7 @@ int turns = 0;
 int prev_encoder_value;
 int prev_torque = 0;
 int x_axis_position = 0;
-int encoder_center_offset = 0;
+int encoder_center_position = 0;
 
 void setup()
 {
@@ -60,7 +62,7 @@ void setup()
   if (result == modbus.ku8MBSuccess)
   {
     int encoder_value = modbus.getResponseBuffer(0);
-    // encoder_center_offset = encoder_value; 
+    encoder_center_position = encoder_value; 
     prev_encoder_value = encoder_value;
   }
 }
@@ -72,6 +74,12 @@ void loop()
   if (result == modbus.ku8MBSuccess)
   {
     int encoder_value = modbus.getResponseBuffer(0);
+    int center_offset = encoder_value - encoder_center_position;
+    if (center_offset < encoder_min) {
+      encoder_value = encoder_max - -center_offset;
+    } else {
+      encoder_value = encoder_value - encoder_center_position;
+    }
     int encoder_position_change = encoder_value - prev_encoder_value;
     if (encoder_value != prev_encoder_value) {
       // Handle new rotation
@@ -80,8 +88,7 @@ void loop()
       } else if (encoder_position_change < -9000) {
         turns = turns + 1;
       }
-      Serial.println(turns);
-      int negative_encoder_value = map(encoder_value, 0, ENCODER_CPR - 1, -(ENCODER_CPR - 1), 0);
+      int negative_encoder_value = map(encoder_value, 0, encoder_max, -encoder_max, 0);
       if (turns > 0) {
         x_axis_position = ENCODER_CPR * turns + encoder_value;
       } else if (turns < -1) {
@@ -94,7 +101,6 @@ void loop()
           x_axis_position = encoder_value;
         }
       }
-      Serial.println(x_axis_position);
       prev_encoder_value = encoder_value;
     }
   }
