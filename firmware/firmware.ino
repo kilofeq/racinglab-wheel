@@ -8,11 +8,22 @@
 #define ENCODER_CPR 10000
 #define WHEEL_DEGREES 1080
 #define END_STOP_TORQUE 100
+#define frictionMaxPositionChangeCfg 25
+#define inertiaMaxAccelerationCfg 10
+#define damperMaxVelocityCfg 150
 
 float wheel_turns = (float)WHEEL_DEGREES / (float)360;
 float joystick_max_position = (wheel_turns * float(ENCODER_CPR)) /2;
 int encoder_min = 0;
 int encoder_max = ENCODER_CPR - 1;
+
+bool posUpdated = false;
+unsigned long lastEffectsUpdate;
+unsigned long nextJoystickMillis;
+unsigned long nextEffectsMillis;
+int lastX;
+int lastVelX;
+int lastAccelX;
 
 //X-axis & Y-axis REQUIRED
 Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, 
@@ -22,7 +33,7 @@ false, false, false,//Rx,Ry,Rz
 false, false, false, false, false);
 
 Gains mygains[2];
-EffectParams myeffectparams[2];
+EffectParams effects[2];
 int32_t forces[2] = {0};
 
 ModbusMaster modbus;
@@ -67,8 +78,7 @@ void setup()
   }
 }
 
-void loop()
-{
+void updatePosition(){
   // Encoder
   uint8_t result = modbus.readHoldingRegisters(encoder_setting_position, 1);
   if (result == modbus.ku8MBSuccess)
@@ -82,6 +92,7 @@ void loop()
     }
     int encoder_position_change = encoder_value - prev_encoder_value;
     if (encoder_value != prev_encoder_value) {
+      posUpdated = true;
       // Handle new rotation
       if (encoder_position_change > 9000) {
         turns = turns - 1;
@@ -104,13 +115,34 @@ void loop()
       prev_encoder_value = encoder_value;
     }
   }
+}
 
+void loop()
+{
+  unsigned long currentMillis;
+  currentMillis = millis();
+  // do not run more frequently than these many milliseconds
+  if (currentMillis >= nextJoystickMillis) {
+    updatePosition();
+    nextJoystickMillis = currentMillis + 2;
+    // we calculate condition forces every 100ms or more frequently if we get position updates
+    if (currentMillis >= nextEffectsMillis || posUpdated) {
+      updateEffects(true);
+      nextEffectsMillis = currentMillis + 100;
+      posUpdated = false;
+    } else {
+      // calculate forces without recalculating condition forces
+      // this helps having smoother spring/damper/friction
+      // if our update rate matches our input device
+      updateEffects(false);
+    }
+  }
   // FFB
   int torque = 0;
-  myeffectparams[0].springMaxPosition = joystick_max_position;
-  myeffectparams[0].springPosition = x_axis_position;
+  effects[0].springMaxPosition = joystick_max_position;
+  effects[0].springPosition = x_axis_position;
   Joystick.setXAxis(x_axis_position);
-  Joystick.setEffectParams(myeffectparams);
+  Joystick.setEffectParams(effects);
   Joystick.getForce(forces);
   // Endstop
   if (x_axis_position > 0 && x_axis_position + 1 >= joystick_max_position) {
@@ -125,6 +157,53 @@ void loop()
   }
   prev_torque = torque;
 }
+
+void updateEffects(bool recalculate){
+    effects[0].frictionMaxPositionChange = frictionMaxPositionChangeCfg;
+    effects[0].inertiaMaxAcceleration = inertiaMaxAccelerationCfg;
+    effects[0].damperMaxVelocity = damperMaxVelocityCfg;
+    effects[0].springMaxPosition = joystick_max_position;
+    effects[0].springPosition = x_axis_position;
+
+    unsigned long currentMillis;
+    currentMillis = millis();
+    int16_t diffTime = currentMillis - lastEffectsUpdate;
+
+    if (diffTime > 0 && recalculate) {
+        lastEffectsUpdate = currentMillis;
+        int16_t positionChangeX = x_axis_position - lastX;
+        int16_t velX = positionChangeX / diffTime;
+        int16_t accelX = ((velX - lastVelX) * 10) / diffTime;
+    
+        effects[0].frictionPositionChange = velX;
+        effects[0].inertiaAcceleration = accelX;
+        effects[0].damperVelocity = velX;
+
+        lastX = x_axis_position;
+        lastVelX = velX;
+        lastAccelX = accelX;
+    } else {
+        effects[0].frictionPositionChange = lastVelX;
+        effects[0].inertiaAcceleration = lastAccelX;
+        effects[0].damperVelocity = lastVelX;
+    }
+
+    Joystick.setEffectParams(effects);
+    Joystick.getForce(forces);
+    int torque = 0;
+    if (x_axis_position > 0 && x_axis_position + 1 >= joystick_max_position) {
+      torque = -END_STOP_TORQUE;
+    } else if (x_axis_position < 0 && x_axis_position - 1 <= -joystick_max_position) {
+      torque = END_STOP_TORQUE;
+    } else {
+      torque = forces[0];
+    }
+    if (prev_torque != torque) {
+      modbus.writeSingleRegister(torque_setting_position, torque);
+    }
+    prev_torque = torque;
+}
+
 
 void preTransmission()
 {
