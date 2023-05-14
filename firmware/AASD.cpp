@@ -77,3 +77,7 @@ void AASD::updatePosition() {
   }
   lastPosition = currentPosition;
 }
+
+void AASD::setTorque(uint8_t torque) {
+  modbus.writeSingleRegister(TORQUE_SETTING_POSITION, torque);
+}

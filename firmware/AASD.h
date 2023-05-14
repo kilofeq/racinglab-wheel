@@ -37,6 +37,7 @@ class AASD {
     int32_t  maxAcceleration;
     int32_t  positionChange;
     int32_t  maxPositionChange;
+    void setTorque(uint8_t);
     void updatePosition(void);
     void setConfig(WheelConfig);
     void initVariables();
