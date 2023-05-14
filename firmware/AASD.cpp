@@ -1,18 +1,18 @@
-#include "Encoder.h"
+#include "AASD.h"
 
-Encoder::Encoder() {
+AASD::AASD() {
   pinMode(MAX485_RE_NEG, OUTPUT);
   pinMode(MAX485_DE, OUTPUT);
   digitalWrite(MAX485_RE_NEG, 0);
   digitalWrite(MAX485_DE, 0);
-  modbus.preTransmission(Encoder::preTransmission);
-  modbus.postTransmission(Encoder::postTransmission);
+  modbus.preTransmission(AASD::preTransmission);
+  modbus.postTransmission(AASD::postTransmission);
 }
 
-Encoder::~Encoder() {
+AASD::~AASD() {
 }
 
-void Encoder::setConfig(WheelConfig wheelConfig) {
+void AASD::setConfig(WheelConfig wheelConfig) {
   maxAngle = wheelConfig.configMaxAngle;
   float turns = (float)maxAngle / (float)360;
   float maxPosition = (turns * float(ENCODER_CPR)) /2;
@@ -21,7 +21,7 @@ void Encoder::setConfig(WheelConfig wheelConfig) {
   initVariables();
 }
 
-void Encoder::initVariables() {
+void AASD::initVariables() {
   currentPosition = 0;
   lastPosition = 0;
   correctPosition = 0;
@@ -31,7 +31,7 @@ void Encoder::initVariables() {
   lastVelocity = 0;
 }
 
-void  Encoder::updatePosition() {
+void AASD::updatePosition() {
   uint8_t result = modbus.readHoldingRegisters(ENCODER_SETTING_POSITION, 1);
   if (result == modbus.ku8MBSuccess) {
     int encoderValue = modbus.getResponseBuffer(0);

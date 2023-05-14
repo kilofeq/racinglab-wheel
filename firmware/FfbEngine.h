@@ -25,7 +25,7 @@
 #include <Arduino.h>
 #include "HIDReportType.h"
 #include "FfbReportHandler.h"
-#include "encoder.h"
+#include "AASD.h"
 #include "wheelConfig.h"
 #include <filters.h>
 
@@ -57,7 +57,7 @@ class FfbEngine {
     //    void CalcCondition(volatile TEffectState&  effect, int32_t * outValue, int32_t* inValue);
     //    void FfbGetFeedbackValue(int16_t* axisPosition, int16_t* out);
 
-    int32_t ForceCalculator(Encoder encoder);
+    int32_t ForceCalculator(AASD aasd);
     int32_t ConstantForceCalculator(volatile TEffectState&  effect);
     int32_t RampForceCalculator(volatile TEffectState&  effect);
     int32_t SquareForceCalculator(volatile TEffectState&  effect);

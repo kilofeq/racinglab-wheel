@@ -199,7 +199,7 @@ int32_t FfbEngine::ConditionForceCalculator(volatile TEffectState&  effect, floa
 
 
 
-int32_t FfbEngine::ForceCalculator(Encoder encoder)
+int32_t FfbEngine::ForceCalculator(AASD aasd)
 {
   int32_t force = 0;
 
@@ -240,22 +240,22 @@ int32_t FfbEngine::ForceCalculator(Encoder encoder)
         case USB_EFFECT_SPRING:
           //          position
           //          ReportPrint(effect);
-          force += ConditionForceCalculator(effect, NormalizeRange(encoder.currentPosition, encoder.maxValue)) * springGainConfig;
+          force += ConditionForceCalculator(effect, NormalizeRange(aasd.currentPosition, aasd.maxValue)) * springGainConfig;
           break;
         case USB_EFFECT_DAMPER:
-          force += ConditionForceCalculator(effect, NormalizeRange(encoder.currentVelocity, encoder.maxVelocity)) * damperGainConfig;
+          force += ConditionForceCalculator(effect, NormalizeRange(aasd.currentVelocity, aasd.maxVelocity)) * damperGainConfig;
           break;
         case USB_EFFECT_INERTIA:
-          if ( encoder.currentAcceleration < 0 and encoder.positionChange < 0) {
-            force += ConditionForceCalculator(effect, abs(NormalizeRange(encoder.currentAcceleration, encoder.maxAcceleration))) * inertiaGainConfig;
-          } else if ( encoder.currentAcceleration < 0 and encoder.positionChange > 0) {
-            force -= ConditionForceCalculator(effect, abs(NormalizeRange(encoder.currentAcceleration, encoder.maxAcceleration))) * inertiaGainConfig;
+          if ( aasd.currentAcceleration < 0 and aasd.positionChange < 0) {
+            force += ConditionForceCalculator(effect, abs(NormalizeRange(aasd.currentAcceleration, aasd.maxAcceleration))) * inertiaGainConfig;
+          } else if ( aasd.currentAcceleration < 0 and aasd.positionChange > 0) {
+            force -= ConditionForceCalculator(effect, abs(NormalizeRange(aasd.currentAcceleration, aasd.maxAcceleration))) * inertiaGainConfig;
           }
           break;
         case USB_EFFECT_FRICTION:
           //          position change
           //          ReportPrint(effect);
-          force += ConditionForceCalculator(effect, NormalizeRange(encoder.positionChange, encoder.maxPositionChange)) * frictionGainConfig;
+          force += ConditionForceCalculator(effect, NormalizeRange(aasd.positionChange, aasd.maxPositionChange)) * frictionGainConfig;
           //                    Serial.println (encoder.positionChange);
           break;
         case USB_EFFECT_CUSTOM:

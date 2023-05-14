@@ -2,7 +2,7 @@
 #define WHEEL_h
 
 #include "WHID.h"
-#include "Encoder.h"
+#include "AASD.h"
 #include "FfbEngine.h"
 
 #if !defined(_USING_HID)
@@ -35,7 +35,7 @@ class Wheel_
     int  RecvReport(void* data, int len);
     void RecvFfbReport();
     WheelConfig wheelConfig;
-    Encoder encoder;    
+    AASD aasd;    
     FfbEngine ffbEngine;
 
 };

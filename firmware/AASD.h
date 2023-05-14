@@ -1,5 +1,5 @@
-#ifndef ENCODER_h
-#define ENCODER_h
+#ifndef AASD_h
+#define AASD_h
 
 #include <Arduino.h>
 #include "WheelConfig.h"
@@ -13,10 +13,10 @@
 #define TORQUE_SETTING_POSITION 200
 #define ENCODER_SETTING_POSITION 391
 
-class Encoder {
+class AASD {
   public:
-    Encoder();
-    ~Encoder(void);
+    AASD();
+    ~AASD(void);
     ModbusMaster modbus;
     float turns;
     float maxPosition;
