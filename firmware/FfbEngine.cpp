@@ -266,7 +266,7 @@ int32_t FfbEngine::ForceCalculator(AASD aasd)
     }
   }
   force = (uint32_t)( (float)1.00 * force * totalGainConfig / 10000); // each effect gain * total effect gain = 10000
-  return constrain(force, -255, 255);
+  return force;
 }
 
 float FfbEngine::NormalizeRange(int32_t x, int32_t maxValue) {

@@ -3,8 +3,10 @@
 #include "PID_v1.h"
 
 Wheel_ Wheel;
-#define BAUD_RATE 115200
+#define BAUD_RATE 9600
+#define CONTROL_PERIOD 1000
 
+unsigned long nextUpdateTime = 0;
 int32_t total_force = 0;
 int32_t last_total_force = 0;
 
@@ -23,6 +25,11 @@ void setup() {
   Serial.begin(BAUD_RATE);
 }
 void loop() {
+  unsigned long currentTime = micros();
+  if (currentTime < nextUpdateTime) {
+    return;
+  }
+  currentTime += CONTROL_PERIOD;
   Wheel.aasd.maxPositionChange = 1151;
   Wheel.aasd.maxVelocity  = 72;
   Wheel.aasd.maxAcceleration = 33;
@@ -39,14 +46,10 @@ void loop() {
   Wheel.write();
   total_force = Wheel.ffbEngine.ForceCalculator(Wheel.aasd);    
   total_force = constrain(total_force, -300, 300);
-  //  Serial.println(Wheel.encoder.currentPosition);
-  //  when reach max and min wheel range, max force to prevent wheel goes over.
   if (Wheel.aasd.currentPosition >= Wheel.aasd.maxValue) {
     total_force = 100;
   } else if (Wheel.aasd.currentPosition <= Wheel.aasd.minValue) {
     total_force = -100;
   }
-  Wheel.aasd.setTorque(
-    total_force * Wheel.wheelConfig.totalGainConfig / 100.0
-  );
+  Wheel.aasd.setTorque(total_force);
 }
