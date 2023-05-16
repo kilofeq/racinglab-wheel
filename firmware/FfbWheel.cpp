@@ -31,7 +31,7 @@ void Wheel_::begin(void) {
   // release all buttons
   ffbEngine.SetFfb(&HID().ffbReportHandler);
   ffbEngine.SetGain(wheelConfig);
-  aasd.setConfig(wheelConfig);
+  encoder.setConfig(wheelConfig);
 
   end();
 }

@@ -23,12 +23,10 @@
 #include "FfbEngine.h"
 #include "HIDReportType.h"
 
-const float cutoff_freq_damper   = 5.0;  //Cutoff frequency in Hz
-const float sampling_time_damper = 0.001; //Sampling time in seconds.
+const float cutoff_freq_damper   = 10.0;  //Cutoff frequency in Hz
+const float sampling_time_damper = 0.02; //Sampling time in seconds.
 IIR::ORDER  order  = IIR::ORDER::OD1; // Order (OD1 to OD4)
-Filter damperFilter(cutoff_freq_damper, sampling_time_damper, order);
-Filter interiaFilter(cutoff_freq_damper, sampling_time_damper, order);
-Filter frictionFilter(cutoff_freq_damper, sampling_time_damper, order);
+Filter constantFilter(cutoff_freq_damper, sampling_time_damper, order);
 FfbEngine::FfbEngine() {
 }
 
@@ -56,9 +54,9 @@ void FfbEngine::SetGain(WheelConfig wheelConfig) {
 }
 
 int32_t FfbEngine::ConstantForceCalculator(volatile TEffectState&  effect) {
-  float tempforce = (float)effect.magnitude * effect.gain / 255;
-  tempforce = map(tempforce, -10000, 10000, -255, 255);
-  return (int32_t) tempforce;
+  float tempForce = (float)effect.magnitude * effect.gain / 255;
+  tempForce = constantFilter.filterIn(tempForce);
+  return (int32_t) tempForce;
 }
 
 int32_t FfbEngine::RampForceCalculator(volatile TEffectState&  effect) {
@@ -181,13 +179,13 @@ int32_t FfbEngine::ConditionForceCalculator(volatile TEffectState&  effect, floa
   tempForce = tempForce * effect.gain / 255;
   switch (effect.effectType) {
     case  USB_EFFECT_DAMPER:
-      tempForce = damperFilter.filterIn(tempForce);
+      // tempForce = damperFilter.filterIn(tempForce);
       break;
     case USB_EFFECT_INERTIA:
-      tempForce = interiaFilter.filterIn(tempForce);
+      // tempForce = interiaFilter.filterIn(tempForce);
       break;
     case USB_EFFECT_FRICTION:
-      tempForce = frictionFilter.filterIn(tempForce);
+      // tempForce = frictionFilter.filterIn(tempForce);
       break;
     default:
       break;
@@ -199,7 +197,7 @@ int32_t FfbEngine::ConditionForceCalculator(volatile TEffectState&  effect, floa
 
 
 
-int32_t FfbEngine::ForceCalculator(AASD aasd)
+int32_t FfbEngine::ForceCalculator(Encoder encoder)
 {
   int32_t force = 0;
 
@@ -240,22 +238,22 @@ int32_t FfbEngine::ForceCalculator(AASD aasd)
         case USB_EFFECT_SPRING:
           //          position
           //          ReportPrint(effect);
-          force += ConditionForceCalculator(effect, NormalizeRange(aasd.currentPosition, aasd.maxValue)) * springGainConfig;
+          force += ConditionForceCalculator(effect, NormalizeRange(encoder.currentPosition, encoder.maxValue)) * springGainConfig;
           break;
         case USB_EFFECT_DAMPER:
-          force += ConditionForceCalculator(effect, NormalizeRange(aasd.currentVelocity, aasd.maxVelocity)) * damperGainConfig;
+          force += ConditionForceCalculator(effect, NormalizeRange(encoder.currentVelocity, encoder.maxVelocity)) * damperGainConfig;
           break;
         case USB_EFFECT_INERTIA:
-          if ( aasd.currentAcceleration < 0 and aasd.positionChange < 0) {
-            force += ConditionForceCalculator(effect, abs(NormalizeRange(aasd.currentAcceleration, aasd.maxAcceleration))) * inertiaGainConfig;
-          } else if ( aasd.currentAcceleration < 0 and aasd.positionChange > 0) {
-            force -= ConditionForceCalculator(effect, abs(NormalizeRange(aasd.currentAcceleration, aasd.maxAcceleration))) * inertiaGainConfig;
+          if ( encoder.currentAcceleration < 0 and encoder.positionChange < 0) {
+            force += ConditionForceCalculator(effect, abs(NormalizeRange(encoder.currentAcceleration, encoder.maxAcceleration))) * inertiaGainConfig;
+          } else if ( encoder.currentAcceleration < 0 and encoder.positionChange > 0) {
+            force -= ConditionForceCalculator(effect, abs(NormalizeRange(encoder.currentAcceleration, encoder.maxAcceleration))) * inertiaGainConfig;
           }
           break;
         case USB_EFFECT_FRICTION:
           //          position change
           //          ReportPrint(effect);
-          force += ConditionForceCalculator(effect, NormalizeRange(aasd.positionChange, aasd.maxPositionChange)) * frictionGainConfig;
+          force += ConditionForceCalculator(effect, NormalizeRange(encoder.positionChange, encoder.maxPositionChange)) * frictionGainConfig;
           //                    Serial.println (encoder.positionChange);
           break;
         case USB_EFFECT_CUSTOM:

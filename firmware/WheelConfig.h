@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+#define PULSE_DIR 1
+#define PWM_POS_NEG 2
 /* Initial config defines */
 #define InitialConfigNotDone 0
 
@@ -10,8 +12,8 @@ class WheelConfig {
   public:
     WheelConfig(void);
     ~WheelConfig(void);
-    uint16_t configMaxAngle;    
-    uint8_t controlMode;
+    uint32_t configCPR;
+    uint16_t configMaxAngle;
     void SetDefault();
     uint8_t constantGainConfig;
     uint8_t rampGainConfig;
@@ -25,8 +27,9 @@ class WheelConfig {
     uint8_t inertiaGainConfig;
     uint8_t frictionGainConfig;
     uint8_t totalGainConfig;
- 
-
+    uint8_t endstopMinForceConfig;
+    uint8_t endstopMaxForceConfig;
+    uint8_t endstopGainConfig;
 };
 
 #endif
