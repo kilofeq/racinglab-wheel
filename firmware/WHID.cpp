@@ -1,14 +1,35 @@
+/*
+   Copyright (c) 2015, Arduino LLC
+   Original code (pre-library): Copyright (c) 2011, Peter Barrett
+
+   Copyright 2019  Hoan Tran (tranvanhoan206 [at] gmail [dot] com)
+
+   Permission to use, copy, modify, and/or distribute this software for
+   any purpose with or without fee is hereby granted, provided that the
+   above copyright notice and this permission notice appear in all copies.
+
+   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+   WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+   WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR
+   BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES
+   OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+   WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+   ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
+   SOFTWARE.
+*/
+
 #include "WHID.h"
+
 
 #if defined(USBCON)
 
-FFBHID_& FFBHID()
+HID_& HID()
 {
-  static FFBHID_ obj;
+  static HID_ obj;
   return obj;
 }
 
-int FFBHID_::getInterface(uint8_t* interfaceCount)
+int HID_::getInterface(uint8_t* interfaceCount)
 {
   *interfaceCount += 1; // uses 1
   HIDDescriptor hidInterface = {
@@ -20,7 +41,7 @@ int FFBHID_::getInterface(uint8_t* interfaceCount)
   return USB_SendControl(0, &hidInterface, sizeof(hidInterface));
 }
 
-int FFBHID_::getDescriptor(USBSetup& setup)
+int HID_::getDescriptor(USBSetup& setup)
 {
   // Check if this is a HID Class Descriptor request
   if (setup.bmRequestType != REQUEST_DEVICETOHOST_STANDARD_INTERFACE) {
@@ -51,7 +72,7 @@ int FFBHID_::getDescriptor(USBSetup& setup)
   return total;
 }
 
-uint8_t FFBHID_::getShortName(char *name)
+uint8_t HID_::getShortName(char *name)
 {
   name[0] = 'H';
   name[1] = 'I';
@@ -61,7 +82,7 @@ uint8_t FFBHID_::getShortName(char *name)
   return 5;
 }
 
-void FFBHID_::AppendDescriptor(HIDSubDescriptor *node)
+void HID_::AppendDescriptor(HIDSubDescriptor *node)
 {
   if (!rootNode) {
     rootNode = node;
@@ -75,7 +96,7 @@ void FFBHID_::AppendDescriptor(HIDSubDescriptor *node)
   descriptorSize += node->length;
 }
 
-int FFBHID_::SendReport(uint8_t id, const void* data, int len)
+int HID_::SendReport(uint8_t id, const void* data, int len)
 {
   auto ret = USB_Send(HID_ENDPOINT_IN, &id, 1);
   if (ret < 0) return ret;
@@ -85,18 +106,18 @@ int FFBHID_::SendReport(uint8_t id, const void* data, int len)
 }
 
 
-int FFBHID_::RecvReport(void* data, int len)
+int HID_::RecvReport(void* data, int len)
 {
   return USB_Recv(HID_ENDPOINT_OUT, &data, len);
 }
 
-uint8_t FFBHID_::AvailableReport()
+uint8_t HID_::AvailableReport()
 {
   return USB_Available(HID_ENDPOINT_OUT);
 }
 
 
-void FFBHID_::RecvFfbReport() {
+void HID_::RecvFfbReport() {
   if (AvailableReport() > 0) {
     uint8_t out_ffbdata[64];
     uint16_t len = USB_Recv(HID_ENDPOINT_OUT, &out_ffbdata, 64);
@@ -106,7 +127,7 @@ void FFBHID_::RecvFfbReport() {
   }
 }
 
-bool FFBHID_::HID_GetReport(USBSetup& setup) {
+bool HID_::HID_GetReport(USBSetup& setup) {
   uint8_t report_id = setup.wValueL;
   uint8_t report_type = setup.wValueH;
   if (report_type == HID_REPORT_TYPE_INPUT)
@@ -120,6 +141,7 @@ bool FFBHID_::HID_GetReport(USBSetup& setup) {
   if (report_type == HID_REPORT_TYPE_FEATURE) {
     if ((report_id == 6))// && (gNewEffectBlockLoad.reportId==6))
     {
+      _delay_us(500);
       USB_SendControl(TRANSFER_RELEASE, ffbReportHandler.FfbOnPIDBlockLoad(), sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
       ffbReportHandler.pidBlockLoad.reportId = 0;
       return (true);
@@ -138,7 +160,7 @@ bool FFBHID_::HID_GetReport(USBSetup& setup) {
   return (false);
 }
 
-bool FFBHID_::HID_SetReport(USBSetup& setup) {
+bool HID_::HID_SetReport(USBSetup& setup) {
   uint8_t report_id = setup.wValueL;
   uint8_t report_type = setup.wValueH;
   uint16_t length = setup.wLength;
@@ -170,7 +192,7 @@ bool FFBHID_::HID_SetReport(USBSetup& setup) {
 
 }
 
-bool FFBHID_::setup(USBSetup& setup)
+bool HID_::setup(USBSetup& setup)
 {
   if (pluggedInterface != setup.wIndex) {
     return false;
@@ -214,7 +236,7 @@ bool FFBHID_::setup(USBSetup& setup)
   return false;
 }
 
-FFBHID_::FFBHID_(void) : PluggableUSBModule(HID_ENPOINT_COUNT, 1, epType),
+HID_::HID_(void) : PluggableUSBModule(HID_ENPOINT_COUNT, 1, epType),
   rootNode(NULL), descriptorSize(0),
   protocol(HID_REPORT_PROTOCOL), idle(1)
 {
@@ -223,7 +245,7 @@ FFBHID_::FFBHID_(void) : PluggableUSBModule(HID_ENPOINT_COUNT, 1, epType),
   PluggableUSB().plug(this);
 }
 
-int FFBHID_::begin(void)
+int HID_::begin(void)
 {
   return 0;
 }

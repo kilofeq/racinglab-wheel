@@ -6,8 +6,8 @@
 
 #define ENCODER_CPR 10000
 #define SLAVE_ID 1
-#define MAX485_DE 4
-#define MAX485_RE_NEG 3
+#define MAX485_DE 3
+#define MAX485_RE_NEG 2
 #define SLAVE_BAUDRATE 115200
 
 class AASD {
@@ -18,6 +18,8 @@ class AASD {
     float maxPosition;
     int minValue;
     int maxValue;
+    int encoderMinValue;
+    int encoderMaxValue;
     int centerPosition;
     int prevEncoderValue;
     uint16_t maxAngle;

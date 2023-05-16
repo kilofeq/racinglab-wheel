@@ -22,7 +22,7 @@
 
 #include <stdint.h>
 #include <Arduino.h>
-#include "HID-Settings.h"
+#include "PluggableUSB.h"
 #include "FfbReportHandler.h"
 
 #if defined(USBCON)
@@ -112,10 +112,10 @@ class HIDSubDescriptor {
     const uint16_t length;
 };
 
-class FFBHID_ : public PluggableUSBModule
+class HID_ : public PluggableUSBModule
 {
   public:
-    FFBHID_(void);
+    HID_(void);
     int begin(void);
     int SendReport(uint8_t id, const void* data, int len);
     void AppendDescriptor(HIDSubDescriptor* node);
@@ -134,7 +134,7 @@ class FFBHID_ : public PluggableUSBModule
     uint8_t getShortName(char* name);
 
   private:
-    uint32_t epType[2];
+    uint8_t epType[2];
 
     HIDSubDescriptor* rootNode;
     uint16_t descriptorSize;
@@ -147,7 +147,7 @@ class FFBHID_ : public PluggableUSBModule
 // Replacement for global singleton.
 // This function prevents static-initialization-order-fiasco
 // https://isocpp.org/wiki/faq/ctors#static-init-order-on-first-use
-FFBHID_& FFBHID();
+HID_& HID();
 
 #define D_HIDREPORT(length) { 9, 0x21, 0x11, 0x01, 0, 1, 0x22, lowByte(length), highByte(length) }
 

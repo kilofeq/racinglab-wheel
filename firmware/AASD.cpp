@@ -9,10 +9,12 @@ AASD::~AASD() {
 
 void AASD::setConfig(WheelConfig wheelConfig) {
   maxAngle = wheelConfig.configMaxAngle;
-  float turns = (float)maxAngle / (float)360;
-  float maxPosition = (turns * float(ENCODER_CPR)) /2;
-  int minValue = 0;
-  int maxValue = ENCODER_CPR - 1;
+  turns = (float)maxAngle / (float)360;
+  maxPosition = (turns * float(ENCODER_CPR)) /2;
+  minValue = -maxPosition;
+  maxValue = maxPosition;
+  encoderMinValue = 0;
+  encoderMaxValue = ENCODER_CPR - 1;
   initVariables();
 }
 
@@ -28,20 +30,20 @@ void AASD::initVariables() {
 
 void AASD::updatePosition(uint16_t encoderValue) {
   int centerOffset = encoderValue - centerPosition;
-  if (centerOffset < minValue) {
-    encoderValue = maxValue - -centerOffset;
+  if (centerOffset < encoderMinValue) {
+    encoderValue = encoderMaxValue - -centerOffset;
   } else {
     encoderValue = centerOffset;
   }
-  int positionChange = encoderValue - prevEncoderValue;
   if (encoderValue != prevEncoderValue) {
+    int positionChange = encoderValue - prevEncoderValue;
     // Handle new rotation
     if (positionChange > 9000) {
       turns = turns - 1;
     } else if (positionChange < -9000) {
       turns = turns + 1;
     }
-    int negativeEncoderValue = map(encoderValue, 0, maxValue, -maxValue, 0);
+    int negativeEncoderValue = map(encoderValue, 0, encoderMaxValue, -encoderMaxValue, 0);
     if (turns > 0) {
       currentPosition = ENCODER_CPR * turns + encoderValue;
     } else if (turns < -1) {

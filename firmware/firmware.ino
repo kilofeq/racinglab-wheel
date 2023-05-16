@@ -4,8 +4,8 @@
 #include "ModbusMaster.h"
 
 Wheel_ Wheel;
-ModbusMaster node;
-#define CONTROL_PERIOD 1000
+ModbusMaster modbus;
+#define CONTROL_PERIOD 2000
 
 unsigned long nextUpdateTime = 0;
 int32_t total_force = 0;
@@ -28,23 +28,28 @@ void setup() {
   pinMode(MAX485_DE, OUTPUT);
   digitalWrite(MAX485_RE_NEG, 0);
   digitalWrite(MAX485_DE, 0);
-  node.begin(SLAVE_ID, Serial1);
-  node.preTransmission(preTransmission);
-  node.postTransmission(postTransmission);
-  node.writeSingleRegister(200, total_force);
+  modbus.begin(SLAVE_ID, Serial1);
+  modbus.preTransmission(preTransmission);
+  modbus.postTransmission(postTransmission);
+  Wheel.aasd.updatePosition(0);
 }
+
 void loop() {
   unsigned long currentTime = micros();
   if (currentTime < nextUpdateTime) {
     return;
   }
-  currentTime += CONTROL_PERIOD;
+  currentTime = currentTime + CONTROL_PERIOD;
   Wheel.aasd.maxPositionChange = 1151;
   Wheel.aasd.maxVelocity  = 72;
   Wheel.aasd.maxAcceleration = 33;
-  int8_t result = node.readHoldingRegisters(391, 1);
-  uint16_t encoderValue = node.getResponseBuffer(0);
-  Wheel.aasd.updatePosition(encoderValue);
+  int8_t result = modbus.readHoldingRegisters(391, 1);
+  Serial.println(result);
+  if (result == modbus.ku8MBSuccess) {
+    uint16_t encoderValue = modbus.getResponseBuffer(0);
+    Serial.println(encoderValue);
+    Wheel.aasd.updatePosition(encoderValue);
+  }
   if (Wheel.aasd.currentPosition > Wheel.aasd.maxValue) {
     Wheel.xAxis(32767);
   } else if (Wheel.aasd.currentPosition < Wheel.aasd.minValue) {
@@ -55,21 +60,26 @@ void loop() {
 
   Wheel.RecvFfbReport();
   Wheel.write();
-  total_force = Wheel.ffbEngine.ForceCalculator(Wheel.aasd);    
-  total_force = constrain(total_force, -300, 300);
+  total_force = Wheel.ffbEngine.ForceCalculator(Wheel.aasd);
+  Serial.println(Wheel.aasd.currentPosition);
+  Serial.println(Wheel.aasd.currentPosition);
+  /* total_force = constrain(total_force, -300, 300);
   if (Wheel.aasd.currentPosition >= Wheel.aasd.maxValue) {
     total_force = 100;
   } else if (Wheel.aasd.currentPosition <= Wheel.aasd.minValue) {
     total_force = -100;
-  }
-  node.writeSingleRegister(200, total_force);
+  } */
+  modbus.writeSingleRegister(200, total_force);
 }
 
-static void preTransmission() {
+void preTransmission()
+{
   digitalWrite(MAX485_RE_NEG, 1);
   digitalWrite(MAX485_DE, 1);
 }
-static void postTransmission() {
+
+void postTransmission()
+{
   digitalWrite(MAX485_RE_NEG, 0);
   digitalWrite(MAX485_DE, 0);
 }
