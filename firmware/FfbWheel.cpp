@@ -6,30 +6,30 @@
 Wheel_::Wheel_(void)
 {
   static HIDSubDescriptor node(_hidReportDescriptor, sizeof(_hidReportDescriptor));
-  HID().AppendDescriptor(&node);
+  FFBHID().AppendDescriptor(&node);
 }
 
 void Wheel_::SendReport(void* data, int length) {
-  HID().SendReport(HID_REPORTID_WHEEL, data, length);
+  FFBHID().SendReport(HID_REPORTID_WHEEL, data, length);
 }
 
 int Wheel_::RecvReport(void* data, int len)
 {
-  return HID().RecvReport(&data, len);
+  return FFBHID().RecvReport(&data, len);
 }
 
 uint8_t Wheel_::AvailableReport()
 {
-  return HID().AvailableReport();
+  return FFBHID().AvailableReport();
 }
 
 void Wheel_::RecvFfbReport() {
-  HID().RecvFfbReport();
+  FFBHID().RecvFfbReport();
 }
 
 void Wheel_::begin(void) {
   // release all buttons
-  ffbEngine.SetFfb(&HID().ffbReportHandler);
+  ffbEngine.SetFfb(&FFBHID().ffbReportHandler);
   ffbEngine.SetGain(wheelConfig);
   aasd.setConfig(wheelConfig);
 

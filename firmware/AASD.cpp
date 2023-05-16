@@ -1,12 +1,7 @@
 #include "AASD.h"
 
 AASD::AASD() {
-  pinMode(MAX485_RE_NEG, OUTPUT);
-  pinMode(MAX485_DE, OUTPUT);
-  digitalWrite(MAX485_RE_NEG, 0);
-  digitalWrite(MAX485_DE, 0);
-  modbus.preTransmission(AASD::preTransmission);
-  modbus.postTransmission(AASD::postTransmission);
+  //ASD::node = node;
 }
 
 AASD::~AASD() {
@@ -31,39 +26,35 @@ void AASD::initVariables() {
   lastVelocity = 0;
 }
 
-void AASD::updatePosition() {
-  uint8_t result = modbus.readHoldingRegisters(ENCODER_SETTING_POSITION, 1);
-  if (result == modbus.ku8MBSuccess) {
-    int encoderValue = modbus.getResponseBuffer(0);
-    int centerOffset = encoderValue - centerPosition;
-    if (centerOffset < minValue) {
-      encoderValue = maxValue - -centerOffset;
+void AASD::updatePosition(uint16_t encoderValue) {
+  int centerOffset = encoderValue - centerPosition;
+  if (centerOffset < minValue) {
+    encoderValue = maxValue - -centerOffset;
+  } else {
+    encoderValue = centerOffset;
+  }
+  int positionChange = encoderValue - prevEncoderValue;
+  if (encoderValue != prevEncoderValue) {
+    // Handle new rotation
+    if (positionChange > 9000) {
+      turns = turns - 1;
+    } else if (positionChange < -9000) {
+      turns = turns + 1;
+    }
+    int negativeEncoderValue = map(encoderValue, 0, maxValue, -maxValue, 0);
+    if (turns > 0) {
+      currentPosition = ENCODER_CPR * turns + encoderValue;
+    } else if (turns < -1) {
+      int correctedTurns = turns + 1;
+      currentPosition = ENCODER_CPR * correctedTurns + negativeEncoderValue;
     } else {
-      encoderValue = centerOffset;
-    }
-    int positionChange = encoderValue - prevEncoderValue;
-    if (encoderValue != prevEncoderValue) {
-      // Handle new rotation
-      if (positionChange > 9000) {
-        turns = turns - 1;
-      } else if (positionChange < -9000) {
-        turns = turns + 1;
-      }
-      int negativeEncoderValue = map(encoderValue, 0, maxValue, -maxValue, 0);
-      if (turns > 0) {
-        currentPosition = ENCODER_CPR * turns + encoderValue;
-      } else if (turns < -1) {
-        int correctedTurns = turns + 1;
-        currentPosition = ENCODER_CPR * correctedTurns + negativeEncoderValue;
+      if (turns == -1) {
+        currentPosition = negativeEncoderValue;
       } else {
-        if (turns == -1) {
-          currentPosition = negativeEncoderValue;
-        } else {
-          currentPosition = encoderValue;
-        }
+        currentPosition = encoderValue;
       }
-      prevEncoderValue = encoderValue;
     }
+    prevEncoderValue = encoderValue;
   }
 
   positionChange = currentPosition - lastPosition;
@@ -76,8 +67,4 @@ void AASD::updatePosition() {
     lastVelocity = currentVelocity;
   }
   lastPosition = currentPosition;
-}
-
-void AASD::setTorque(uint8_t torque) {
-  modbus.writeSingleRegister(TORQUE_SETTING_POSITION, torque);
 }

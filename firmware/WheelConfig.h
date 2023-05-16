@@ -3,8 +3,6 @@
 
 #include <Arduino.h>
 
-#define PULSE_DIR 1
-#define PWM_POS_NEG 2
 /* Initial config defines */
 #define InitialConfigNotDone 0
 

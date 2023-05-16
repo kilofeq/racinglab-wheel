@@ -1,39 +1,14 @@
-/*
-   Copyright (c) 2015, Arduino LLC
-   Original code (pre-library): Copyright (c) 2011, Peter Barrett
-
-   Copyright 2019  Hoan Tran (tranvanhoan206 [at] gmail [dot] com)
-
-   Permission to use, copy, modify, and/or distribute this software for
-   any purpose with or without fee is hereby granted, provided that the
-   above copyright notice and this permission notice appear in all copies.
-
-   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
-   WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
-   WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR
-   BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES
-   OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
-   WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-   ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
-   SOFTWARE.
-*/
-
 #include "WHID.h"
 
 #if defined(USBCON)
-#define USB_EP_SIZE 64
-#define EP_TYPE_INTERRUPT_IN 0x03
-#define EP_TYPE_INTERRUPT_OUT 0x0B
 
-extern USBDeviceClass USBDevice;
-
-HID_& HID()
+FFBHID_& FFBHID()
 {
-  static HID_ obj;
+  static FFBHID_ obj;
   return obj;
 }
 
-int HID_::getInterface(uint8_t* interfaceCount)
+int FFBHID_::getInterface(uint8_t* interfaceCount)
 {
   *interfaceCount += 1; // uses 1
   HIDDescriptor hidInterface = {
@@ -42,10 +17,10 @@ int HID_::getInterface(uint8_t* interfaceCount)
     D_ENDPOINT(USB_ENDPOINT_IN(HID_ENDPOINT_IN), USB_ENDPOINT_TYPE_INTERRUPT, USB_EP_SIZE, 0x01),
     D_ENDPOINT(USB_ENDPOINT_OUT(HID_ENDPOINT_OUT), USB_ENDPOINT_TYPE_INTERRUPT, USB_EP_SIZE, 0x01)
   };
-  return USBDevice.sendControl(&hidInterface, sizeof(hidInterface));
+  return USB_SendControl(0, &hidInterface, sizeof(hidInterface));
 }
 
-int HID_::getDescriptor(USBSetup& setup)
+int FFBHID_::getDescriptor(USBSetup& setup)
 {
   // Check if this is a HID Class Descriptor request
   if (setup.bmRequestType != REQUEST_DEVICETOHOST_STANDARD_INTERFACE) {
@@ -63,7 +38,7 @@ int HID_::getDescriptor(USBSetup& setup)
   int total = 0;
   HIDSubDescriptor* node;
   for (node = rootNode; node; node = node->next) {
-    int res = USBDevice.sendControl(node->data, node->length);
+    int res = USB_SendControl(TRANSFER_PGM, node->data, node->length);
     if (res == -1)
       return -1;
     total += res;
@@ -76,7 +51,7 @@ int HID_::getDescriptor(USBSetup& setup)
   return total;
 }
 
-uint8_t HID_::getShortName(char *name)
+uint8_t FFBHID_::getShortName(char *name)
 {
   name[0] = 'H';
   name[1] = 'I';
@@ -86,7 +61,7 @@ uint8_t HID_::getShortName(char *name)
   return 5;
 }
 
-void HID_::AppendDescriptor(HIDSubDescriptor *node)
+void FFBHID_::AppendDescriptor(HIDSubDescriptor *node)
 {
   if (!rootNode) {
     rootNode = node;
@@ -100,38 +75,38 @@ void HID_::AppendDescriptor(HIDSubDescriptor *node)
   descriptorSize += node->length;
 }
 
-int HID_::SendReport(uint8_t id, const void* data, int len)
+int FFBHID_::SendReport(uint8_t id, const void* data, int len)
 {
-  auto ret = USBDevice.send(HID_ENDPOINT_IN, &id, 1);
+  auto ret = USB_Send(HID_ENDPOINT_IN, &id, 1);
   if (ret < 0) return ret;
-  auto ret2 = USBDevice.send(HID_ENDPOINT_IN, data, len);
+  auto ret2 = USB_Send(HID_ENDPOINT_IN | TRANSFER_RELEASE, data, len);
   if (ret2 < 0) return ret2;
   return ret + ret2;
 }
 
 
-int HID_::RecvReport(void* data, int len)
+int FFBHID_::RecvReport(void* data, int len)
 {
-  return USBDevice.recv(HID_ENDPOINT_OUT, &data, len);
+  return USB_Recv(HID_ENDPOINT_OUT, &data, len);
 }
 
-uint8_t HID_::AvailableReport()
+uint8_t FFBHID_::AvailableReport()
 {
-  return USBDevice.available(HID_ENDPOINT_OUT);
+  return USB_Available(HID_ENDPOINT_OUT);
 }
 
 
-void HID_::RecvFfbReport() {
+void FFBHID_::RecvFfbReport() {
   if (AvailableReport() > 0) {
     uint8_t out_ffbdata[64];
-    uint16_t len = USBDevice.recv(HID_ENDPOINT_OUT, &out_ffbdata, 64);
+    uint16_t len = USB_Recv(HID_ENDPOINT_OUT, &out_ffbdata, 64);
     if (len >= 0) {
       ffbReportHandler.FfbOnUsbData(out_ffbdata, len);
     }
   }
 }
 
-bool HID_::HID_GetReport(USBSetup& setup) {
+bool FFBHID_::HID_GetReport(USBSetup& setup) {
   uint8_t report_id = setup.wValueL;
   uint8_t report_type = setup.wValueH;
   if (report_type == HID_REPORT_TYPE_INPUT)
@@ -145,8 +120,7 @@ bool HID_::HID_GetReport(USBSetup& setup) {
   if (report_type == HID_REPORT_TYPE_FEATURE) {
     if ((report_id == 6))// && (gNewEffectBlockLoad.reportId==6))
     {
-      delayMicroseconds(500);
-      USBDevice.sendControl(ffbReportHandler.FfbOnPIDBlockLoad(), sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
+      USB_SendControl(TRANSFER_RELEASE, ffbReportHandler.FfbOnPIDBlockLoad(), sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
       ffbReportHandler.pidBlockLoad.reportId = 0;
       return (true);
     }
@@ -157,14 +131,14 @@ bool HID_::HID_GetReport(USBSetup& setup) {
       ans.ramPoolSize = 0xffff;
       ans.maxSimultaneousEffects = MAX_EFFECTS;
       ans.memoryManagement = 3;
-      USBDevice.sendControl(&ans, sizeof(USB_FFBReport_PIDPool_Feature_Data_t));
+      USB_SendControl(TRANSFER_RELEASE, &ans, sizeof(USB_FFBReport_PIDPool_Feature_Data_t));
       return (true);
     }
   }
   return (false);
 }
 
-bool HID_::HID_SetReport(USBSetup& setup) {
+bool FFBHID_::HID_SetReport(USBSetup& setup) {
   uint8_t report_id = setup.wValueL;
   uint8_t report_type = setup.wValueH;
   uint16_t length = setup.wLength;
@@ -172,7 +146,7 @@ bool HID_::HID_SetReport(USBSetup& setup) {
   if (report_type == HID_REPORT_TYPE_FEATURE) {
     if (length == 0)
     {
-      USBDevice.recvControl(&data, length);
+      USB_RecvControl(&data, length);
       // Block until data is read (make length negative)
       //disableFeatureReport();
       return true;
@@ -180,7 +154,7 @@ bool HID_::HID_SetReport(USBSetup& setup) {
     if (report_id == 5)
     {
       USB_FFBReport_CreateNewEffect_Feature_Data_t ans;
-      USBDevice.recvControl(&ans, sizeof(USB_FFBReport_CreateNewEffect_Feature_Data_t));
+      USB_RecvControl(&ans, sizeof(USB_FFBReport_CreateNewEffect_Feature_Data_t));
       ffbReportHandler.FfbOnCreateNewEffect(&ans);
     }
     return (true);
@@ -196,7 +170,7 @@ bool HID_::HID_SetReport(USBSetup& setup) {
 
 }
 
-bool HID_::setup(USBSetup& setup)
+bool FFBHID_::setup(USBSetup& setup)
 {
   if (pluggedInterface != setup.wIndex) {
     return false;
@@ -240,7 +214,7 @@ bool HID_::setup(USBSetup& setup)
   return false;
 }
 
-HID_::HID_(void) : PluggableUSBModule(HID_ENPOINT_COUNT, 1, epType),
+FFBHID_::FFBHID_(void) : PluggableUSBModule(HID_ENPOINT_COUNT, 1, epType),
   rootNode(NULL), descriptorSize(0),
   protocol(HID_REPORT_PROTOCOL), idle(1)
 {
@@ -249,7 +223,7 @@ HID_::HID_(void) : PluggableUSBModule(HID_ENPOINT_COUNT, 1, epType),
   PluggableUSB().plug(this);
 }
 
-int HID_::begin(void)
+int FFBHID_::begin(void)
 {
   return 0;
 }

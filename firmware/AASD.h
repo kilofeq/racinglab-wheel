@@ -3,21 +3,17 @@
 
 #include <Arduino.h>
 #include "WheelConfig.h"
-#include <ModbusMaster.h>
 
-#define SLAVE_ID 1
-#define MAX485_DE 3
-#define MAX485_RE_NEG 2
-#define SLAVE_BAUDRATE 115200
 #define ENCODER_CPR 10000
-#define TORQUE_SETTING_POSITION 200
-#define ENCODER_SETTING_POSITION 391
+#define SLAVE_ID 1
+#define MAX485_DE 4
+#define MAX485_RE_NEG 3
+#define SLAVE_BAUDRATE 115200
 
 class AASD {
   public:
     AASD();
     ~AASD(void);
-    ModbusMaster modbus;
     float turns;
     float maxPosition;
     int minValue;
@@ -37,19 +33,9 @@ class AASD {
     int32_t  maxAcceleration;
     int32_t  positionChange;
     int32_t  maxPositionChange;
-    void setTorque(uint8_t);
-    void updatePosition(void);
+    void updatePosition(uint16_t);
     void setConfig(WheelConfig);
     void initVariables();
-
-    static void preTransmission() {
-      digitalWrite(MAX485_RE_NEG, 1);
-      digitalWrite(MAX485_DE, 1);
-    }
-    static void postTransmission() {
-      digitalWrite(MAX485_RE_NEG, 0);
-      digitalWrite(MAX485_DE, 0);
-    }
 };
 
 #endif
